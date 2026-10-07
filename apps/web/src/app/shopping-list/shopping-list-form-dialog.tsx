@@ -13,7 +13,6 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import type { ShoppingListItem } from '@/lib/api-client';
 
 export interface ShoppingListFormValues {
@@ -170,7 +169,7 @@ export function ShoppingListFormDialog({
 
           <div className="grid gap-2">
             <Label htmlFor="notes">Notas</Label>
-            <Textarea
+            <Input
               id="notes"
               value={values.notes}
               placeholder="Marca sin lactosa"

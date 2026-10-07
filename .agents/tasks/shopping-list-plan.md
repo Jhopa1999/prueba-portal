@@ -308,3 +308,29 @@ revisor puede leer esto SIN re-ejecutar.
    `npm run db:up` y los dos servidores). El spec `e2e/shopping-list.spec.ts`
    compila bajo tsc en aislamiento junto con `e2e/catalogs.spec.ts` (sin errores).
    El cleanup usa filtro estricto `name startsWith 'E2E_SHOP_'`, nunca sin where.
+
+## Nota de verificacion — iteracion de review (fix del finding)
+
+Finding del review (`shopping-list-review.json`): `new-textarea-component`
+(blocking). Se habia creado `apps/web/src/components/ui/textarea.tsx` y se usaba
+para el campo `notes`, contra la instruccion explicita del plan ("NO existe
+textarea; el campo notes usa Input. NO agregar componentes nuevos") y la
+restriccion de espejar catalog sin dependencias nuevas.
+
+Correccion aplicada (sin cambio de comportamiento ni de lo que el usuario ve mas
+alla de que el textarea pasa a ser un Input de una linea, como prescribe el plan):
+- `shopping-list-form-dialog.tsx`: el campo `notes` ahora usa `Input` (se quito el
+  import y el uso de `Textarea`).
+- Se elimino `apps/web/src/components/ui/textarea.tsx`.
+- Verificado: no quedan referencias a `Textarea` en `apps/web`.
+
+Scripts reales ejecutados desde la raiz tras el fix:
+1. `npm run typecheck` (api + api-client + web) -> OK, CERO errores (gate principal).
+2. `npm run test:unit` -> OK: 2 suites, 27 tests pasados (catalog + shopping-list).
+3. `npm run build:web` (con `NEXT_PUBLIC_API_BASE_URL=http://localhost:3001`) -> OK;
+   prerenderiza `/catalogs` y `/shopping-list`.
+
+No se re-ejecuto `prisma:generate`/`openapi:generate`/`api-client:generate` porque el
+fix solo toco el frontend (swap de componente + borrado de archivo UI no usado); el
+schema Prisma, la migracion, el modulo backend, el OpenAPI y el api-client generado
+no cambiaron.
