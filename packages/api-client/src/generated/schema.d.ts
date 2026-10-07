@@ -57,6 +57,42 @@ export interface paths {
         patch: operations["CatalogController_update"];
         trace?: never;
     };
+    "/shopping-list-items": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lista productos de la lista de mercado, con filtros opcionales. */
+        get: operations["ShoppingListController_findMany"];
+        put?: never;
+        /** Crea un producto en la lista de mercado. */
+        post: operations["ShoppingListController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/shopping-list-items/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Obtiene un producto de la lista por id. */
+        get: operations["ShoppingListController_findOne"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Actualiza los datos de un producto de la lista. */
+        patch: operations["ShoppingListController_update"];
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -159,6 +195,136 @@ export interface components {
              * @example 2
              */
             sortOrder?: number;
+        };
+        CreateShoppingListItemDto: {
+            /**
+             * @description Nombre del producto a comprar.
+             * @example Leche
+             */
+            name: string;
+            /**
+             * @description Cantidad del producto. Por defecto 1.
+             * @default 1
+             * @example 2
+             */
+            quantity: number;
+            /**
+             * @description Unidad de medida del producto. Por defecto "unidad".
+             * @default unidad
+             * @example litro
+             */
+            unit: string;
+            /**
+             * @description Categoria del producto (opcional).
+             * @example Lacteos
+             */
+            category?: string;
+            /**
+             * @description Indica si el producto ya fue comprado. Por defecto false.
+             * @default false
+             * @example false
+             */
+            purchased: boolean;
+            /**
+             * @description Indica si el producto esta activo. Por defecto true.
+             * @default true
+             * @example true
+             */
+            active: boolean;
+            /**
+             * @description Notas adicionales del producto (opcional).
+             * @example Marca sin lactosa
+             */
+            notes?: string;
+        };
+        ShoppingListItemResponseDto: {
+            /**
+             * Format: uuid
+             * @description Identificador unico.
+             */
+            id: string;
+            /**
+             * @description Nombre del producto.
+             * @example Leche
+             */
+            name: string;
+            /**
+             * @description Cantidad del producto.
+             * @example 2
+             */
+            quantity: number;
+            /**
+             * @description Unidad de medida.
+             * @example litro
+             */
+            unit: string;
+            /**
+             * @description Categoria del producto.
+             * @example Lacteos
+             */
+            category: string | null;
+            /**
+             * @description Indica si el producto ya fue comprado.
+             * @example false
+             */
+            purchased: boolean;
+            /**
+             * @description Indica si el producto esta activo.
+             * @example true
+             */
+            active: boolean;
+            /**
+             * @description Notas adicionales.
+             * @example Marca sin lactosa
+             */
+            notes: string | null;
+            /**
+             * Format: date-time
+             * @description Fecha de creacion.
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description Fecha de ultima actualizacion.
+             */
+            updatedAt: string;
+        };
+        UpdateShoppingListItemDto: {
+            /**
+             * @description Nombre del producto a comprar.
+             * @example Leche
+             */
+            name?: string;
+            /**
+             * @description Cantidad del producto.
+             * @example 2
+             */
+            quantity?: number;
+            /**
+             * @description Unidad de medida del producto.
+             * @example litro
+             */
+            unit?: string;
+            /**
+             * @description Categoria del producto.
+             * @example Lacteos
+             */
+            category?: string;
+            /**
+             * @description Indica si el producto ya fue comprado.
+             * @example true
+             */
+            purchased?: boolean;
+            /**
+             * @description Indica si el producto esta activo.
+             * @example false
+             */
+            active?: boolean;
+            /**
+             * @description Notas adicionales del producto.
+             * @example Marca sin lactosa
+             */
+            notes?: string;
         };
     };
     responses: never;
@@ -329,6 +495,149 @@ export interface operations {
                 content?: never;
             };
             /** @description Elemento no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ShoppingListController_findMany: {
+        parameters: {
+            query?: {
+                /** @description Filtra por estado activo. */
+                active?: boolean;
+                /** @description Filtra por estado comprado. */
+                purchased?: boolean;
+                /** @description Filtra por categoria. */
+                category?: unknown;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Listado de productos. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingListItemResponseDto"][];
+                };
+            };
+            /** @description Parametros de filtro invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ShoppingListController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateShoppingListItemDto"];
+            };
+        };
+        responses: {
+            /** @description Producto creado. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingListItemResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ShoppingListController_findOne: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador UUID del producto. */
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Producto encontrado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingListItemResponseDto"];
+                };
+            };
+            /** @description El id no es un UUID valido. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Producto no encontrado. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    ShoppingListController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Identificador UUID del producto. */
+                id: unknown;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateShoppingListItemDto"];
+            };
+        };
+        responses: {
+            /** @description Producto actualizado. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ShoppingListItemResponseDto"];
+                };
+            };
+            /** @description Datos de entrada invalidos o id no UUID. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Producto no encontrado. */
             404: {
                 headers: {
                     [name: string]: unknown;

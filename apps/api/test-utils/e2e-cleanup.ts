@@ -13,6 +13,11 @@ import { PrismaClient } from '../src/generated/prisma/client';
 
 export const E2E_CATALOG = 'E2E_CATALOG';
 
+// Marcador reservado para los productos de la lista de mercado creados en E2E.
+// El cleanup borra SOLO los registros cuyo name empieza con este prefijo, nunca
+// sin filtro.
+export const E2E_SHOPPING_PREFIX = 'E2E_SHOP_';
+
 // Carga el .env raiz del monorepo (tres niveles por encima de test-utils).
 loadEnv({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -32,6 +37,30 @@ export async function cleanupE2ECatalog(): Promise<number> {
     // Filtro estricto por el catalogo reservado. Nunca deleteMany({}) sin where.
     const result = await prisma.catalogItem.deleteMany({
       where: { catalog: E2E_CATALOG },
+    });
+    return result.count;
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+/**
+ * Borra, con filtro estricto, solo los productos de la lista de mercado creados
+ * en E2E (name con el prefijo reservado). Devuelve cuantos registros se
+ * eliminaron. Nunca deleteMany({}) sin where.
+ */
+export async function cleanupE2EShoppingList(): Promise<number> {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error('DATABASE_URL no definida: no se puede limpiar E2E.');
+  }
+
+  const adapter = new PrismaPg({ connectionString });
+  const prisma = new PrismaClient({ adapter });
+  try {
+    // Filtro estricto por el prefijo reservado. Nunca deleteMany({}) sin where.
+    const result = await prisma.shoppingListItem.deleteMany({
+      where: { name: { startsWith: E2E_SHOPPING_PREFIX } },
     });
     return result.count;
   } finally {

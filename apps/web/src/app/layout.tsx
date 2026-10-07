@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { Boxes, LayoutGrid } from 'lucide-react';
+import { Boxes, LayoutGrid, ShoppingCart } from 'lucide-react';
 import { Toaster } from '@/components/ui/sonner';
 import './globals.css';
 
@@ -30,6 +30,13 @@ export default function RootLayout({
               >
                 <LayoutGrid className="size-4" aria-hidden="true" />
                 Maestras
+              </Link>
+              <Link
+                href="/shopping-list"
+                className="flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium hover:bg-accent hover:text-accent-foreground"
+              >
+                <ShoppingCart className="size-4" aria-hidden="true" />
+                Lista de mercado
               </Link>
             </nav>
           </aside>

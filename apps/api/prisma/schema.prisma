@@ -33,3 +33,26 @@ model CatalogItem {
   @@index([sortOrder])
   @@map("catalog_items")
 }
+
+/// Elemento de una lista de mercado (productos a comprar).
+/// Modela cada producto con su cantidad, unidad y estado de compra. El estado
+/// `purchased` indica si ya fue comprado; `active` permite ocultar un producto
+/// sin borrarlo (la API no expone DELETE fisico).
+model ShoppingListItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  quantity  Int      @default(1)
+  unit      String   @default("unidad")
+  category  String?
+  purchased Boolean  @default(false) @map("purchased")
+  active    Boolean  @default(true)
+  notes     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Indices para los filtros habituales (category, purchased, active).
+  @@index([category])
+  @@index([purchased])
+  @@index([active])
+  @@map("shopping_list_items")
+}

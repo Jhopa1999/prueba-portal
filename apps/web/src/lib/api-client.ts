@@ -9,6 +9,13 @@ export type CatalogItem = components['schemas']['CatalogItemResponseDto'];
 export type CreateCatalogItem = components['schemas']['CreateCatalogItemDto'];
 export type UpdateCatalogItem = components['schemas']['UpdateCatalogItemDto'];
 
+export type ShoppingListItem =
+  components['schemas']['ShoppingListItemResponseDto'];
+export type CreateShoppingListItem =
+  components['schemas']['CreateShoppingListItemDto'];
+export type UpdateShoppingListItem =
+  components['schemas']['UpdateShoppingListItemDto'];
+
 /**
  * URL base de la API, leida de la configuracion publica del frontend.
  * No es un secreto (no contiene credenciales). Si falta, se produce un error

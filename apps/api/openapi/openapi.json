@@ -187,6 +187,177 @@
           "catalog-items"
         ]
       }
+    },
+    "/shopping-list-items": {
+      "post": {
+        "operationId": "ShoppingListController_create",
+        "parameters": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateShoppingListItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Producto creado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingListItemResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos."
+          }
+        },
+        "summary": "Crea un producto en la lista de mercado.",
+        "tags": [
+          "shopping-list-items"
+        ]
+      },
+      "get": {
+        "operationId": "ShoppingListController_findMany",
+        "parameters": [
+          {
+            "name": "active",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por estado activo.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "purchased",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por estado comprado.",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "category",
+            "required": false,
+            "in": "query",
+            "description": "Filtra por categoria.",
+            "schema": {}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Listado de productos.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ShoppingListItemResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Parametros de filtro invalidos."
+          }
+        },
+        "summary": "Lista productos de la lista de mercado, con filtros opcionales.",
+        "tags": [
+          "shopping-list-items"
+        ]
+      }
+    },
+    "/shopping-list-items/{id}": {
+      "get": {
+        "operationId": "ShoppingListController_findOne",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Identificador UUID del producto.",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Producto encontrado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingListItemResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "El id no es un UUID valido."
+          },
+          "404": {
+            "description": "Producto no encontrado."
+          }
+        },
+        "summary": "Obtiene un producto de la lista por id.",
+        "tags": [
+          "shopping-list-items"
+        ]
+      },
+      "patch": {
+        "operationId": "ShoppingListController_update",
+        "parameters": [
+          {
+            "name": "id",
+            "required": true,
+            "in": "path",
+            "description": "Identificador UUID del producto.",
+            "schema": {
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateShoppingListItemDto"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Producto actualizado.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingListItemResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Datos de entrada invalidos o id no UUID."
+          },
+          "404": {
+            "description": "Producto no encontrado."
+          }
+        },
+        "summary": "Actualiza los datos de un producto de la lista.",
+        "tags": [
+          "shopping-list-items"
+        ]
+      }
     }
   },
   "info": {
@@ -339,6 +510,172 @@
             "description": "Orden de la opcion dentro del catalogo.",
             "minimum": 0,
             "example": 2
+          }
+        }
+      },
+      "CreateShoppingListItemDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre del producto a comprar.",
+            "example": "Leche",
+            "maxLength": 255
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Cantidad del producto. Por defecto 1.",
+            "default": 1,
+            "minimum": 1,
+            "example": 2
+          },
+          "unit": {
+            "type": "string",
+            "description": "Unidad de medida del producto. Por defecto \"unidad\".",
+            "default": "unidad",
+            "example": "litro",
+            "maxLength": 50
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoria del producto (opcional).",
+            "example": "Lacteos",
+            "maxLength": 100
+          },
+          "purchased": {
+            "type": "boolean",
+            "description": "Indica si el producto ya fue comprado. Por defecto false.",
+            "default": false,
+            "example": false
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Indica si el producto esta activo. Por defecto true.",
+            "default": true,
+            "example": true
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas adicionales del producto (opcional).",
+            "example": "Marca sin lactosa",
+            "maxLength": 1000
+          }
+        },
+        "required": [
+          "name"
+        ]
+      },
+      "ShoppingListItemResponseDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Identificador unico."
+          },
+          "name": {
+            "type": "string",
+            "description": "Nombre del producto.",
+            "example": "Leche"
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Cantidad del producto.",
+            "example": 2
+          },
+          "unit": {
+            "type": "string",
+            "description": "Unidad de medida.",
+            "example": "litro"
+          },
+          "category": {
+            "type": "string",
+            "nullable": true,
+            "description": "Categoria del producto.",
+            "example": "Lacteos"
+          },
+          "purchased": {
+            "type": "boolean",
+            "description": "Indica si el producto ya fue comprado.",
+            "example": false
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Indica si el producto esta activo.",
+            "example": true
+          },
+          "notes": {
+            "type": "string",
+            "nullable": true,
+            "description": "Notas adicionales.",
+            "example": "Marca sin lactosa"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de creacion."
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Fecha de ultima actualizacion."
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "quantity",
+          "unit",
+          "category",
+          "purchased",
+          "active",
+          "notes",
+          "createdAt",
+          "updatedAt"
+        ]
+      },
+      "UpdateShoppingListItemDto": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Nombre del producto a comprar.",
+            "example": "Leche",
+            "maxLength": 255
+          },
+          "quantity": {
+            "type": "number",
+            "description": "Cantidad del producto.",
+            "minimum": 1,
+            "example": 2
+          },
+          "unit": {
+            "type": "string",
+            "description": "Unidad de medida del producto.",
+            "example": "litro",
+            "maxLength": 50
+          },
+          "category": {
+            "type": "string",
+            "description": "Categoria del producto.",
+            "example": "Lacteos",
+            "maxLength": 100
+          },
+          "purchased": {
+            "type": "boolean",
+            "description": "Indica si el producto ya fue comprado.",
+            "example": true
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Indica si el producto esta activo.",
+            "example": false
+          },
+          "notes": {
+            "type": "string",
+            "description": "Notas adicionales del producto.",
+            "example": "Marca sin lactosa",
+            "maxLength": 1000
           }
         }
       }
