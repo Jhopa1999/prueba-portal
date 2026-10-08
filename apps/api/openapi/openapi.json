@@ -531,15 +531,15 @@
           },
           "unit": {
             "type": "string",
-            "description": "Unidad de medida del producto. Por defecto \"unidad\".",
-            "default": "unidad",
-            "example": "litro",
+            "description": "Code de la maestra UNIDAD. Por defecto \"UNIDAD\". Debe ser un code activo de esa maestra.",
+            "default": "UNIDAD",
+            "example": "L",
             "maxLength": 50
           },
           "category": {
             "type": "string",
-            "description": "Categoria del producto (opcional).",
-            "example": "Lacteos",
+            "description": "Code de la maestra CATEGORIA (opcional). Debe ser un code activo de esa maestra.",
+            "example": "LACTEOS",
             "maxLength": 100
           },
           "purchased": {
@@ -651,14 +651,14 @@
           },
           "unit": {
             "type": "string",
-            "description": "Unidad de medida del producto.",
-            "example": "litro",
+            "description": "Code de la maestra UNIDAD. Debe ser un code activo.",
+            "example": "L",
             "maxLength": 50
           },
           "category": {
             "type": "string",
-            "description": "Categoria del producto.",
-            "example": "Lacteos",
+            "description": "Code de la maestra CATEGORIA. Debe ser un code activo.",
+            "example": "LACTEOS",
             "maxLength": 100
           },
           "purchased": {

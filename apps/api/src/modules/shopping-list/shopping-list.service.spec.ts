@@ -1,5 +1,6 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { CatalogService } from '../catalog/catalog.service';
 import { ShoppingListService } from './shopping-list.service';
 
 /**
@@ -28,6 +29,41 @@ function createPrismaMock(): {
   return { prisma, shoppingListItem };
 }
 
+/**
+ * Mock de CatalogService: solo findMany, que es lo que usa la validacion blanda.
+ * Por defecto devuelve las maestras CATEGORIA y UNIDAD con codes de ejemplo
+ * activos. No se conecta a PostgreSQL.
+ */
+type CatalogServiceMock = { findMany: jest.Mock };
+
+function createCatalogMock(): {
+  catalog: CatalogService;
+  findMany: jest.Mock;
+} {
+  const findMany = jest.fn(
+    async (filters: { catalog?: string; active?: boolean }) => {
+      const data: Record<string, string[]> = {
+        CATEGORIA: ['LACTEOS', 'PANADERIA'],
+        UNIDAD: ['UNIDAD', 'L'],
+      };
+      const codes = filters.catalog ? (data[filters.catalog] ?? []) : [];
+      return codes.map((code) => ({
+        id: `id-${code}`,
+        catalog: filters.catalog,
+        code,
+        label: code,
+        active: true,
+        sortOrder: 0,
+        createdAt: new Date('2026-01-01T00:00:00.000Z'),
+        updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+      }));
+    },
+  );
+  const mock: CatalogServiceMock = { findMany };
+  const catalog = mock as unknown as CatalogService;
+  return { catalog, findMany };
+}
+
 function makeItem(overrides: Partial<Record<string, unknown>> = {}) {
   const now = new Date('2026-01-01T00:00:00.000Z');
   return {
@@ -48,11 +84,14 @@ function makeItem(overrides: Partial<Record<string, unknown>> = {}) {
 describe('ShoppingListService', () => {
   let service: ShoppingListService;
   let shoppingListItem: ShoppingListItemDelegateMock;
+  let catalogFindMany: jest.Mock;
 
   beforeEach(() => {
     const mock = createPrismaMock();
+    const catalogMock = createCatalogMock();
     shoppingListItem = mock.shoppingListItem;
-    service = new ShoppingListService(mock.prisma);
+    catalogFindMany = catalogMock.findMany;
+    service = new ShoppingListService(mock.prisma, catalogMock.catalog);
   });
 
   describe('create', () => {
@@ -63,7 +102,7 @@ describe('ShoppingListService', () => {
       const result = await service.create({
         name: 'Leche',
         quantity: 2,
-        unit: 'litro',
+        unit: 'L',
       });
 
       expect(result).toBe(created);
@@ -84,14 +123,14 @@ describe('ShoppingListService', () => {
       expect(arg.data).not.toHaveProperty('notes');
     });
 
-    it('envia los campos cuando se proporcionan', async () => {
+    it('envia los campos cuando se proporcionan (unit/category como code)', async () => {
       shoppingListItem.create.mockResolvedValue(makeItem());
 
       await service.create({
         name: 'Pan',
         quantity: 3,
-        unit: 'unidad',
-        category: 'Panaderia',
+        unit: 'UNIDAD',
+        category: 'PANADERIA',
         purchased: true,
         active: false,
         notes: 'Integral',
@@ -101,12 +140,68 @@ describe('ShoppingListService', () => {
       expect(arg.data).toEqual({
         name: 'Pan',
         quantity: 3,
-        unit: 'unidad',
-        category: 'Panaderia',
+        unit: 'UNIDAD',
+        category: 'PANADERIA',
         purchased: true,
         active: false,
         notes: 'Integral',
       });
+    });
+
+    it('normaliza unit/category a MAYUSCULAS antes de validar y guardar', async () => {
+      shoppingListItem.create.mockResolvedValue(makeItem());
+
+      await service.create({ name: 'Pan', unit: 'l', category: 'lacteos' });
+
+      const arg = shoppingListItem.create.mock.calls[0][0];
+      expect(arg.data.unit).toBe('L');
+      expect(arg.data.category).toBe('LACTEOS');
+    });
+
+    it('acepta category y unit validos (codes activos de maestra)', async () => {
+      shoppingListItem.create.mockResolvedValue(makeItem());
+
+      await expect(
+        service.create({ name: 'Pan', unit: 'UNIDAD', category: 'LACTEOS' }),
+      ).resolves.toBeDefined();
+      expect(catalogFindMany).toHaveBeenCalledWith({
+        catalog: 'CATEGORIA',
+        active: true,
+      });
+      expect(catalogFindMany).toHaveBeenCalledWith({
+        catalog: 'UNIDAD',
+        active: true,
+      });
+    });
+
+    it('rechaza category que no es un code activo de la maestra CATEGORIA', async () => {
+      await expect(
+        service.create({ name: 'Pan', category: 'NO_EXISTE' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.create({ name: 'Pan', category: 'NO_EXISTE' }),
+      ).rejects.toThrow(/maestra CATEGORIA/);
+      expect(shoppingListItem.create).not.toHaveBeenCalled();
+    });
+
+    it('rechaza unit que no es un code activo de la maestra UNIDAD', async () => {
+      await expect(
+        service.create({ name: 'Pan', unit: 'INVALIDA' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      await expect(
+        service.create({ name: 'Pan', unit: 'INVALIDA' }),
+      ).rejects.toThrow(/maestra UNIDAD/);
+      expect(shoppingListItem.create).not.toHaveBeenCalled();
+    });
+
+    it('no valida ni envia category/unit cuando llegan vacios', async () => {
+      shoppingListItem.create.mockResolvedValue(makeItem());
+
+      await service.create({ name: 'Pan', category: '', unit: '' });
+
+      const arg = shoppingListItem.create.mock.calls[0][0];
+      expect(arg.data).not.toHaveProperty('category');
+      expect(arg.data).not.toHaveProperty('unit');
     });
 
     it('propaga errores del delegate sin transformarlos', async () => {
@@ -170,6 +265,38 @@ describe('ShoppingListService', () => {
       await expect(
         service.update('missing-id', { name: 'X' }),
       ).rejects.toBeInstanceOf(NotFoundException);
+      expect(shoppingListItem.update).not.toHaveBeenCalled();
+    });
+
+    it('guarda unit/category normalizados cuando son codes validos', async () => {
+      const existing = makeItem();
+      shoppingListItem.findUnique.mockResolvedValue(existing);
+      shoppingListItem.update.mockResolvedValue(existing);
+
+      await service.update(existing.id, { unit: 'l', category: 'lacteos' });
+
+      const arg = shoppingListItem.update.mock.calls[0][0];
+      expect(arg.data.unit).toBe('L');
+      expect(arg.data.category).toBe('LACTEOS');
+    });
+
+    it('rechaza category invalida en update (BadRequest) y no actualiza', async () => {
+      const existing = makeItem();
+      shoppingListItem.findUnique.mockResolvedValue(existing);
+
+      await expect(
+        service.update(existing.id, { category: 'NO_EXISTE' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(shoppingListItem.update).not.toHaveBeenCalled();
+    });
+
+    it('rechaza unit invalida en update (BadRequest) y no actualiza', async () => {
+      const existing = makeItem();
+      shoppingListItem.findUnique.mockResolvedValue(existing);
+
+      await expect(
+        service.update(existing.id, { unit: 'INVALIDA' }),
+      ).rejects.toBeInstanceOf(BadRequestException);
       expect(shoppingListItem.update).not.toHaveBeenCalled();
     });
   });

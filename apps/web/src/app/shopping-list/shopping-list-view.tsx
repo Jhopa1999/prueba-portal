@@ -5,7 +5,6 @@ import { Plus, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -23,11 +22,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import type { ShoppingListItem } from '@/lib/api-client';
+import type { CatalogItem, ShoppingListItem } from '@/lib/api-client';
 import {
   ShoppingListError,
   createShoppingListItem,
   listShoppingListItems,
+  listShoppingListMaestras,
   updateShoppingListItem,
   type ShoppingListFilters,
 } from '@/lib/shopping-list';
@@ -40,6 +40,9 @@ type PurchasedFilter = 'all' | 'purchased' | 'pending';
 type ActiveFilter = 'all' | 'active' | 'inactive';
 type LoadState = 'loading' | 'success' | 'error';
 
+// Valor del filtro de categoria que representa "todas".
+const CATEGORY_ALL = '__all__';
+
 function formatDate(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
@@ -49,11 +52,26 @@ function formatDate(iso: string): string {
   }).format(date);
 }
 
+/** Traduce un code de maestra a su etiqueta; si no se encuentra, usa el code. */
+function labelForCode(options: CatalogItem[], code: string | null): string {
+  if (!code) return '-';
+  const match = options.find((o) => o.code === code);
+  return match ? match.label : code;
+}
+
 export function ShoppingListView() {
   const [items, setItems] = React.useState<ShoppingListItem[]>([]);
   const [state, setState] = React.useState<LoadState>('loading');
 
-  // Filtros aplicados (los que se envian al backend).
+  // Opciones de maestras para los dropdowns del formulario y la tabla.
+  const [categoryOptions, setCategoryOptions] = React.useState<CatalogItem[]>(
+    [],
+  );
+  const [unitOptions, setUnitOptions] = React.useState<CatalogItem[]>([]);
+  const [optionsLoading, setOptionsLoading] = React.useState(true);
+
+  // Filtros aplicados (los que se envian al backend). El filtro de categoria
+  // ahora es un code de la maestra CATEGORIA ('' = todas).
   const [categoryInput, setCategoryInput] = React.useState('');
   const [purchasedFilter, setPurchasedFilter] =
     React.useState<PurchasedFilter>('all');
@@ -86,9 +104,27 @@ export function ShoppingListView() {
     }
   }, [buildFilters]);
 
+  // Carga las maestras una sola vez (fuente unica para dialog y tabla).
+  const loadMaestras = React.useCallback(async () => {
+    setOptionsLoading(true);
+    try {
+      const { categories, units } = await listShoppingListMaestras();
+      setCategoryOptions(categories);
+      setUnitOptions(units);
+    } catch {
+      // Si fallan las maestras no se bloquea la lista: los dropdowns quedaran
+      // vacios y el formulario mostrara la pista correspondiente.
+      setCategoryOptions([]);
+      setUnitOptions([]);
+    } finally {
+      setOptionsLoading(false);
+    }
+  }, []);
+
   // Carga inicial.
   React.useEffect(() => {
     void load();
+    void loadMaestras();
     // Solo al montar; los filtros se aplican con el boton Aplicar.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -209,12 +245,25 @@ export function ShoppingListView() {
       >
         <div className="grid flex-1 gap-2">
           <Label htmlFor="filter-category">Categoria</Label>
-          <Input
-            id="filter-category"
-            placeholder="Todas"
-            value={categoryInput}
-            onChange={(e) => setCategoryInput(e.target.value)}
-          />
+          <Select
+            value={categoryInput === '' ? CATEGORY_ALL : categoryInput}
+            onValueChange={(value) =>
+              setCategoryInput(value === CATEGORY_ALL ? '' : value)
+            }
+            disabled={optionsLoading}
+          >
+            <SelectTrigger id="filter-category">
+              <SelectValue placeholder="Todas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value={CATEGORY_ALL}>Todas</SelectItem>
+              {categoryOptions.map((option) => (
+                <SelectItem key={option.code} value={option.code}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
         <div className="grid gap-2 sm:w-48">
           <Label htmlFor="filter-purchased">Comprado</Label>
@@ -302,9 +351,11 @@ export function ShoppingListView() {
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">{item.name}</TableCell>
                   <TableCell className="whitespace-nowrap">
-                    {item.quantity} {item.unit}
+                    {item.quantity} {labelForCode(unitOptions, item.unit)}
                   </TableCell>
-                  <TableCell>{item.category ?? '-'}</TableCell>
+                  <TableCell>
+                    {labelForCode(categoryOptions, item.category ?? null)}
+                  </TableCell>
                   <TableCell>
                     {item.purchased ? (
                       <Badge variant="success">Comprado</Badge>
@@ -368,6 +419,9 @@ export function ShoppingListView() {
         editing={editing}
         submitting={submitting}
         onSubmit={handleSubmit}
+        categoryOptions={categoryOptions}
+        unitOptions={unitOptions}
+        optionsLoading={optionsLoading}
       />
     </div>
   );

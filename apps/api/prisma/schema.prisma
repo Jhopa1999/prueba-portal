@@ -42,7 +42,10 @@ model ShoppingListItem {
   id        String   @id @default(uuid()) @db.Uuid
   name      String
   quantity  Int      @default(1)
-  unit      String   @default("unidad")
+  // El default es un code valido de la maestra UNIDAD (ver seed). Antes era el
+  // texto libre "unidad"; ahora unit/category guardan codes de las maestras
+  // CATEGORIA y UNIDAD, validados de forma blanda en el service.
+  unit      String   @default("UNIDAD")
   category  String?
   purchased Boolean  @default(false) @map("purchased")
   active    Boolean  @default(true)

@@ -50,8 +50,8 @@ export class UpdateShoppingListItemDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'Unidad de medida del producto.',
-    example: 'litro',
+    description: 'Code de la maestra UNIDAD. Debe ser un code activo.',
+    example: 'L',
     maxLength: 50,
   })
   @IsOptional()
@@ -61,8 +61,8 @@ export class UpdateShoppingListItemDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'Categoria del producto.',
-    example: 'Lacteos',
+    description: 'Code de la maestra CATEGORIA. Debe ser un code activo.',
+    example: 'LACTEOS',
     maxLength: 100,
   })
   @IsOptional()

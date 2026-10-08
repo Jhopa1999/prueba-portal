@@ -20,7 +20,7 @@ const trim = ({ value }: { value: unknown }): unknown =>
 /**
  * Entrada para crear un ShoppingListItem.
  * `quantity`, `unit`, `purchased` y `active` son opcionales: si no se envian,
- * se usan los defaults del modelo (1, "unidad", false y true). Se recorta
+ * se usan los defaults del modelo (1, "UNIDAD", false y true). Se recorta
  * (trim) `name`, `category` y `notes` antes de validar, de modo que un valor de
  * solo espacios se considere vacio y sea rechazado.
  */
@@ -51,9 +51,11 @@ export class CreateShoppingListItemDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'Unidad de medida del producto. Por defecto "unidad".',
-    default: 'unidad',
-    example: 'litro',
+    description:
+      'Code de la maestra UNIDAD. Por defecto "UNIDAD". Debe ser un code ' +
+      'activo de esa maestra.',
+    default: 'UNIDAD',
+    example: 'L',
     maxLength: 50,
   })
   @IsOptional()
@@ -63,8 +65,10 @@ export class CreateShoppingListItemDto {
 
   @ApiPropertyOptional({
     type: String,
-    description: 'Categoria del producto (opcional).',
-    example: 'Lacteos',
+    description:
+      'Code de la maestra CATEGORIA (opcional). Debe ser un code activo de ' +
+      'esa maestra.',
+    example: 'LACTEOS',
     maxLength: 100,
   })
   @IsOptional()

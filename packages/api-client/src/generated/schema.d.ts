@@ -209,14 +209,14 @@ export interface components {
              */
             quantity: number;
             /**
-             * @description Unidad de medida del producto. Por defecto "unidad".
-             * @default unidad
-             * @example litro
+             * @description Code de la maestra UNIDAD. Por defecto "UNIDAD". Debe ser un code activo de esa maestra.
+             * @default UNIDAD
+             * @example L
              */
             unit: string;
             /**
-             * @description Categoria del producto (opcional).
-             * @example Lacteos
+             * @description Code de la maestra CATEGORIA (opcional). Debe ser un code activo de esa maestra.
+             * @example LACTEOS
              */
             category?: string;
             /**
@@ -301,13 +301,13 @@ export interface components {
              */
             quantity?: number;
             /**
-             * @description Unidad de medida del producto.
-             * @example litro
+             * @description Code de la maestra UNIDAD. Debe ser un code activo.
+             * @example L
              */
             unit?: string;
             /**
-             * @description Categoria del producto.
-             * @example Lacteos
+             * @description Code de la maestra CATEGORIA. Debe ser un code activo.
+             * @example LACTEOS
              */
             category?: string;
             /**

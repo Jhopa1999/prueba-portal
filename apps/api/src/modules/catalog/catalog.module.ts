@@ -12,5 +12,8 @@ import { CatalogService } from './catalog.service';
   imports: [PrismaModule],
   controllers: [CatalogController],
   providers: [CatalogService],
+  // Se exporta CatalogService para que otros modulos (p. ej. shopping-list)
+  // reutilicen la capacidad de consultar maestras en vez de reconsultar Prisma.
+  exports: [CatalogService],
 })
 export class CatalogModule {}

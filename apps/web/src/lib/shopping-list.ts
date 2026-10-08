@@ -1,9 +1,37 @@
 import {
   api,
+  type CatalogItem,
   type ShoppingListItem,
   type CreateShoppingListItem,
   type UpdateShoppingListItem,
 } from './api-client';
+import { listCatalogItems } from './catalog';
+
+// Nombres de las maestras que alimentan los dropdowns del formulario.
+export const CATEGORIA_CATALOG = 'CATEGORIA';
+export const UNIDAD_CATALOG = 'UNIDAD';
+
+export interface ShoppingListMaestras {
+  categories: CatalogItem[];
+  units: CatalogItem[];
+}
+
+/**
+ * Carga las opciones activas de las maestras CATEGORIA y UNIDAD en paralelo.
+ * Reutiliza listCatalogItems del cliente de catalogos (una sola fuente). Lanza
+ * un ShoppingListError si falla la comunicacion, para que la vista lo maneje.
+ */
+export async function listShoppingListMaestras(): Promise<ShoppingListMaestras> {
+  try {
+    const [categories, units] = await Promise.all([
+      listCatalogItems({ catalog: CATEGORIA_CATALOG, active: true }),
+      listCatalogItems({ catalog: UNIDAD_CATALOG, active: true }),
+    ]);
+    return { categories, units };
+  } catch {
+    throw toShoppingListError(undefined);
+  }
+}
 
 /**
  * Error de dominio con un mensaje ya entendible para el usuario.

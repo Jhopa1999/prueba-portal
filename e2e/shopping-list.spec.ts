@@ -8,12 +8,52 @@ import {
  * E2E del flujo de Lista de mercado. Valida la cadena completa:
  * navegador -> Next.js -> api-client -> NestJS -> Prisma -> PostgreSQL.
  *
- * Los datos usan el prefijo reservado E2E_SHOP_ en el nombre y se limpian antes
- * y despues de la suite con una utilidad de testing (sin DELETE por HTTP).
+ * Los productos usan el prefijo reservado E2E_SHOP_ en el nombre y se limpian
+ * antes y despues de la suite con una utilidad de testing (sin DELETE por HTTP).
+ *
+ * Categoria y Unidad ahora provienen de las maestras CATEGORIA y UNIDAD: el
+ * formulario las ofrece como dropdowns. La suite usa valores base del seed
+ * (categoria LACTEOS, unidad L). beforeAll se asegura via la API publica de que
+ * esos codes existan y esten activos; no los borra en afterAll porque son datos
+ * legitimos de maestra (no basura E2E). Antes de correr E2E conviene ejecutar
+ * `npm run prisma:seed --workspace apps/api`.
  */
 
-// Categoria reservada para acotar el filtro de la suite a datos E2E.
-const E2E_CATEGORY = 'E2E_CAT';
+// Base de la API (coincide con playwright.config.ts: NestJS en el puerto 3001).
+const API_BASE = 'http://localhost:3001';
+
+// Codes de maestra que usa la suite (del seed base).
+const CATEGORIA_CODE = 'LACTEOS';
+const CATEGORIA_LABEL = 'Lacteos';
+const UNIDAD_CODE = 'L';
+const UNIDAD_LABEL = 'Litro';
+
+/**
+ * Garantiza que un code exista y este activo en una maestra. Si ya existe
+ * (409), se considera correcto. No borra nada: son valores legitimos de maestra.
+ */
+async function ensureCatalogItem(
+  catalog: string,
+  code: string,
+  label: string,
+): Promise<void> {
+  const res = await fetch(`${API_BASE}/catalog-items`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ catalog, code, label, active: true }),
+  });
+  // 201 creado, 409 ya existia: ambos dejan el valor disponible.
+  if (res.status !== 201 && res.status !== 409) {
+    throw new Error(
+      `No se pudo asegurar la maestra ${catalog}/${code}: HTTP ${res.status}`,
+    );
+  }
+}
+
+test.beforeAll(async () => {
+  await ensureCatalogItem('CATEGORIA', CATEGORIA_CODE, CATEGORIA_LABEL);
+  await ensureCatalogItem('UNIDAD', UNIDAD_CODE, UNIDAD_LABEL);
+});
 
 // Cada test parte de un estado E2E limpio para que sean independientes del orden.
 test.beforeEach(async ({ page }) => {
@@ -25,12 +65,14 @@ test.afterAll(async () => {
   await cleanupE2EShoppingList();
 });
 
-/** Aplica el filtro de categoria E2E y el estado de comprado indicado. */
+/** Aplica el filtro de categoria indicado y el estado de comprado indicado. */
 async function applyFilter(
   page: Page,
   comprado: 'Todos' | 'Comprados' | 'Pendientes',
+  categoria: 'Todas' | typeof CATEGORIA_LABEL = CATEGORIA_LABEL,
 ) {
-  await page.locator('#filter-category').fill(E2E_CATEGORY);
+  await page.locator('#filter-category').click();
+  await page.getByRole('option', { name: categoria, exact: true }).click();
   await page.locator('#filter-purchased').click();
   await page.getByRole('option', { name: comprado, exact: true }).click();
   const listResponse = page.waitForResponse(
@@ -47,9 +89,15 @@ function rowByName(page: Page, name: string) {
   return page.getByRole('row').filter({ hasText: name });
 }
 
+/** Selecciona una opcion en un Select de shadcn por el id del trigger. */
+async function selectOption(page: Page, triggerId: string, optionLabel: string) {
+  await page.locator(`#${triggerId}`).click();
+  await page.getByRole('option', { name: optionLabel, exact: true }).click();
+}
+
 async function createItem(
   page: Page,
-  values: { name: string; quantity: number; unit: string },
+  values: { name: string; quantity: number },
 ) {
   await page.getByRole('button', { name: 'Nuevo producto' }).first().click();
   const dialog = page.getByRole('dialog');
@@ -57,8 +105,9 @@ async function createItem(
 
   await dialog.getByLabel('Nombre').fill(values.name);
   await dialog.getByLabel('Cantidad').fill(String(values.quantity));
-  await dialog.getByLabel('Unidad').fill(values.unit);
-  await dialog.getByLabel('Categoria').fill(E2E_CATEGORY);
+  // Unidad y Categoria se eligen de los dropdowns de maestras.
+  await selectOption(page, 'unit', UNIDAD_LABEL);
+  await selectOption(page, 'category', CATEGORIA_LABEL);
 
   const created = page.waitForResponse(
     (r) =>
@@ -88,16 +137,16 @@ test('flujo principal de lista de mercado', async ({ page }) => {
   await applyFilter(page, 'Todos');
   await expect(page.getByText('No hay productos todavia.')).toBeVisible();
 
-  // Crear Leche y confirmar en tabla.
-  await createItem(page, { name: leche, quantity: 2, unit: 'litro' });
+  // Crear Leche y confirmar en tabla (la tabla muestra las etiquetas de maestra).
+  await createItem(page, { name: leche, quantity: 2 });
   await applyFilter(page, 'Todos');
   const lecheRow = rowByName(page, leche);
-  await expect(lecheRow).toContainText('litro');
-  await expect(lecheRow).toContainText(E2E_CATEGORY);
+  await expect(lecheRow).toContainText(UNIDAD_LABEL);
+  await expect(lecheRow).toContainText(CATEGORIA_LABEL);
   await expect(lecheRow.getByText('Pendiente', { exact: true })).toBeVisible();
 
   // Crear Pan.
-  await createItem(page, { name: pan, quantity: 1, unit: 'unidad' });
+  await createItem(page, { name: pan, quantity: 1 });
   await applyFilter(page, 'Todos');
   await expect(rowByName(page, pan)).toBeVisible();
 
